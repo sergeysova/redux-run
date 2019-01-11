@@ -1,0 +1,52 @@
+{
+  "name": "redux-run",
+  "version": "0.1.0",
+  "description": "Run your side-effects effectively",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "BABEL_ENV=commonjs nyc ava",
+    "prettier": "prettier './**/**/**.{json,js,eslintrc}' --write",
+    "report": "nyc report --reporter=text-lcov | coveralls"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sergeysova/redux-run.git"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "keywords": [
+    "redux",
+    "thunk",
+    "async",
+    "effect"
+  ],
+  "author": "Sergey Sova <mail@sergeysova.com> (https://sergeysova.com/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/sergeysova/redux-run/issues"
+  },
+  "lint-staged": {
+    "*.js": [
+      "prettier --write",
+      "git add"
+    ],
+    "*.{json, eslintrc}": [
+      "prettier --write",
+      "git add"
+    ]
+  },
+  "homepage": "https://github.com/sergeysova/redux-run#readme",
+  "devDependencies": {
+    "ava": "^1.0.1",
+    "coveralls": "^3.0.2",
+    "husky": "^1.3.1",
+    "lint-staged": "^8.1.0",
+    "nyc": "^13.1.0",
+    "prettier": "^1.15.3",
+    "redux": "^4.0.1",
+    "redux-thunk": "^2.3.0"
+  }
+}
