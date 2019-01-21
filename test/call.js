@@ -1,16 +1,26 @@
 import { createRunner, defaultOptions } from "../src/index"
-import test from "ava"
+import test, { beforeEach } from "ava"
 import { createStore, applyMiddleware } from "redux"
 import thunk from "redux-thunk"
 
-test("createRunner should return object with methods", (t) => {
-  const runner = createRunner()
+beforeEach((t) => {
+  t.context.create = () => {
+    const initialState = { value: 0 }
+    const action = (value) => ({ type: "set", value })
+    const reducer = (state = initialState, action) => {
+      if (action.type === "set") {
+        return { ...state, value: action.value }
+      }
+      return state
+    }
 
-  t.is(typeof runner, "object")
-  t.is(typeof runner.call, "function")
+    const store = createStore(reducer, applyMiddleware(thunk))
+
+    return { store, action }
+  }
 })
 
-test(".call should call effect", (t) => {
+test("should call effect", (t) => {
   const { call } = createRunner()
 
   const target = (a, b) => () => a + b
@@ -21,28 +31,68 @@ test(".call should call effect", (t) => {
   t.is(result, 5)
 })
 
-test(".call should pass dispatch and getState from redux", (t) => {
-  const initialState = {
-    value: 0,
-  }
-  const reducer = (state = initialState, action) => {
-    if (action.type === "set") {
-      return { ...state, value: action.value }
-    }
-    return state
-  }
-
+test("should pass dispatch and getState from redux", (t) => {
+  const { store, action } = t.context.create()
   const effect = (another) => (dispatch, getState) => {
     const { value } = getState()
     const newValue = value + another
-    dispatch({ type: "set", value: newValue })
+    dispatch(action(newValue))
   }
-
-  const store = createStore(reducer, applyMiddleware(thunk))
   const { call } = createRunner()
 
-  store.dispatch({ type: "set", value: 1 })
+  store.dispatch(action(1))
   store.dispatch(call(effect, 2))
 
   t.is(store.getState().value, 3)
+})
+
+test("dispatch(call) should return result of effect", (t) => {
+  const { store, action } = t.context.create()
+  const { call } = createRunner()
+  const effect = (another) => (dispatch, getState) => {
+    const { value } = getState()
+    return value + another
+  }
+
+  store.dispatch(action(1))
+  const result = store.dispatch(call(effect, 2))
+
+  t.is(result, 3)
+})
+
+test("correctly run effect from effect", (t) => {
+  const { store, action } = t.context.create()
+  const { call } = createRunner()
+
+  const foo = (another) => (dispatch, getState) => {
+    const { value } = getState()
+    dispatch(action(another + value))
+  }
+
+  const bar = (a, b) => (dispatch) => {
+    dispatch(call(foo, a + b))
+  }
+
+  store.dispatch(action(1))
+  store.dispatch(call(bar, 2, 3))
+
+  t.is(store.getState().value, 6, "store has actual value")
+})
+
+test("correctly return value from call effect from effect", (t) => {
+  const { store, action } = t.context.create()
+  const { call } = createRunner()
+
+  const foo = (another) => (dispatch, getState) => {
+    const { value } = getState()
+    return another + value
+  }
+
+  const bar = (a, b) => (dispatch) => dispatch(call(foo, a + b))
+
+  store.dispatch(action(1))
+  const result = store.dispatch(call(bar, 2, 3))
+
+  t.is(store.getState().value, 1, "store has actual value")
+  t.is(result, 6, "effect returned actual value")
 })
